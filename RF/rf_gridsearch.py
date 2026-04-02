@@ -1,25 +1,15 @@
 import pandas as pd
 from pandas.plotting import table
 import numpy as np
-from scikeras.wrappers import KerasClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
-import random
-import tensorflow as tf
-from sklearn.utils import shuffle
-
-SEED = 42
-np.random.seed(SEED)
-random.seed(SEED)
-tf.random.set_seed(SEED)
 
 class DataLoader:
     """Laduje dane train, test, val z plikow .csv"""
-    def __init__(self, splits=['train', 'test']):
+    def __init__(self, splits=['train', 'test', 'val']):
         self.splits = splits
         self.datasets = {}
 
@@ -31,7 +21,7 @@ class DataLoader:
             y = df.iloc[:, 0].values
             self.datasets[split] = (X, y)
         return self.datasets
-
+    
 class GridSearchTrainer:
     """Przeprowadza GridSearchCV na modelu KerasClassifier i raportuje wyniki."""
     def __init__(self, model, param_grid, cv=3, scoring='accuracy', n_jobs=1):
@@ -76,46 +66,25 @@ class GridSearchTrainer:
         recall = recall_score(y_test, y_pred, average='macro')
         return f1, precision, recall, acc
 
-
-# Wczytanie danych
 data_loader = DataLoader()
 datasets = data_loader.load()
 
 X_train, y_train = datasets['train']
 X_test, y_test = datasets['test']
 
-X_train, y_train = shuffle(X_train, y_train, random_state=SEED)
-X_test, y_test = shuffle(X_test, y_test, random_state=SEED)
-
 input_dim = X_train.shape[1]
 num_classes = len(np.unique(y_train))
 
-def build_model_fn(num_layers=1, units=32, activation='relu', lr=0.001):
-    model = Sequential()
-    model.add(Input(shape=(input_dim,)))
-    for _ in range(num_layers):
-        model.add(Dense(units, activation=activation))
-    model.add(Dense(num_classes, activation='softmax'))
-    model.compile(optimizer=Adam(learning_rate=lr),
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
-    return model
+rf = RandomForestClassifier(random_state=42)
 
-# Utworzenie modelu
-keras_model = KerasClassifier(model=build_model_fn, verbose=2)
-
-# Parametry do GridSearch
-param_grid = {
-    'model__num_layers': [2],
-    'model__units': [32],
-    'model__activation': ['tanh'],
-    'model__lr': [0.001, 0.0001],
-    'batch_size': [64],
-    'epochs': [50]
+param_grid = { 
+    'n_estimators': [200, 500],
+    'max_features': ['auto', 'sqrt', 'log2'],
+    'max_depth' : [4,5,6,7,8],
+    'criterion' :['gini', 'entropy']
 }
 
-# Trenowanie
-trainer = GridSearchTrainer(keras_model, param_grid)
+trainer = GridSearchTrainer(rf, param_grid)
 grid_result = trainer.train(X_train, y_train)
 
 best_params = grid_result.best_params_
@@ -123,7 +92,6 @@ print("Najlepsze parametry modelu:")
 for k, v in best_params.items():
     print(f"{k}: {v}")
 
-# Ocena na danych testowych
 f1, precision, recall, acc = trainer.evaluate_on_test(X_test, y_test)
 print(f"F1: {f1:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, Accuracy: {acc:.4f}")
 
@@ -139,7 +107,3 @@ tbl.set_fontsize(10)
 tbl.scale(1, 1.5)
 plt.savefig("gridsearch_results.png", bbox_inches='tight', dpi=150)
 plt.close()
-
-print(grid_result.cv_results_['split0_test_score'][grid_result.best_index_])
-print(grid_result.cv_results_['split1_test_score'][grid_result.best_index_])
-print(grid_result.cv_results_['split2_test_score'][grid_result.best_index_])
