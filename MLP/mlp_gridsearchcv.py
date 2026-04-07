@@ -106,10 +106,10 @@ keras_model = KerasClassifier(model=build_model_fn, verbose=2)
 
 # Parametry do GridSearch
 param_grid = {
-    'model__num_layers': [2],
-    'model__units': [32],
-    'model__activation': ['tanh'],
-    'model__lr': [0.001, 0.0001],
+    'model__num_layers': [1, 2, 3],
+    'model__units': [16, 32, 64],
+    'model__activation': ['relu', 'tanh'],
+    'model__lr': [0.01, 0.001, 0.0001],
     'batch_size': [64],
     'epochs': [50]
 }
@@ -125,10 +125,21 @@ for k, v in best_params.items():
 
 # Ocena na danych testowych
 f1, precision, recall, acc = trainer.evaluate_on_test(X_test, y_test)
-print(f"F1: {f1:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, Accuracy: {acc:.4f}")
+
+results_text = (
+    f"Wyniki modelu na zbiorze testowym:\n"
+    f"----------------------------------\n"
+    f"F1 (macro): {f1:.4f}\n"
+    f"Precision:  {precision:.4f}\n"
+    f"Recall:     {recall:.4f}\n"
+    f"Accuracy:   {acc:.4f}\n"
+)
+# Zapis do pliku .txt
+with open("MLP/test_results.txt", "w", encoding="utf-8") as f:
+    f.write(results_text)
 
 best_model = grid_result.best_estimator_.model_
-best_model.save("best_model.keras")  # zapis w formacie Keras
+best_model.save("MLP/best_model.keras")  # zapis w formacie Keras
 
 results_table = trainer.get_results_table() # tworzenie tabeli z wszystkimi modelami i parametrami
 fig, ax = plt.subplots(figsize=(12, len(results_table)*0.5))
@@ -137,7 +148,7 @@ tbl = table(ax, results_table, loc='center', cellLoc='center', colWidths=[0.1]*l
 tbl.auto_set_font_size(False)
 tbl.set_fontsize(10)
 tbl.scale(1, 1.5)
-plt.savefig("gridsearch_results.png", bbox_inches='tight', dpi=150)
+plt.savefig("MLP/gridsearch_results.png", bbox_inches='tight', dpi=150)
 plt.close()
 
 print(grid_result.cv_results_['split0_test_score'][grid_result.best_index_])

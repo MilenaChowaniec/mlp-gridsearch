@@ -1,0 +1,6 @@
+Wyniki modelu na zbiorze testowym:
+----------------------------------
+F1 (macro): 0.9821
+Precision:  0.9821
+Recall:     0.9823
+Accuracy:   0.9826

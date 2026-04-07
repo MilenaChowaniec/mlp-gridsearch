@@ -4,8 +4,11 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
+from sklearn.utils import shuffle
+import joblib
+
+SEED = 42
 
 class DataLoader:
     """Laduje dane train, test, val z plikow .csv"""
@@ -23,7 +26,7 @@ class DataLoader:
         return self.datasets
     
 class GridSearchTrainer:
-    """Przeprowadza GridSearchCV na modelu KerasClassifier i raportuje wyniki."""
+    """Przeprowadza GridSearchCV na modelu RandomForestClassifier i raportuje wyniki."""
     def __init__(self, model, param_grid, cv=3, scoring='accuracy', n_jobs=1):
         self.model = model
         self.param_grid = param_grid
@@ -39,7 +42,7 @@ class GridSearchTrainer:
             cv=self.cv,
             scoring=self.scoring,
             n_jobs=self.n_jobs,
-            verbose=2
+            verbose=10
         )
         self.grid_result = grid.fit(X, y)
         return self.grid_result
@@ -72,31 +75,44 @@ datasets = data_loader.load()
 X_train, y_train = datasets['train']
 X_test, y_test = datasets['test']
 
+X_train, y_train = shuffle(X_train, y_train, random_state=SEED)
+X_test, y_test = shuffle(X_test, y_test, random_state=SEED)
+
 input_dim = X_train.shape[1]
 num_classes = len(np.unique(y_train))
 
 rf = RandomForestClassifier(random_state=42)
 
 param_grid = { 
-    'n_estimators': [200, 500],
-    'max_features': ['auto', 'sqrt', 'log2'],
-    'max_depth' : [4,5,6,7,8],
-    'criterion' :['gini', 'entropy']
+    'n_estimators': [100, 300],
+    'criterion' :['gini', 'entropy'],
+    'max_features': ['sqrt', 'log2'],
+    'max_depth' : [15, 20, None],
+    'min_samples_leaf': [2, 5],
+    'min_samples_split': [5, 10]
 }
 
 trainer = GridSearchTrainer(rf, param_grid)
 grid_result = trainer.train(X_train, y_train)
+
+print("GRID DONE")
 
 best_params = grid_result.best_params_
 print("Najlepsze parametry modelu:")
 for k, v in best_params.items():
     print(f"{k}: {v}")
 
+print("BEST PARAMS DONE")
+
 f1, precision, recall, acc = trainer.evaluate_on_test(X_test, y_test)
 print(f"F1: {f1:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, Accuracy: {acc:.4f}")
 
-best_model = grid_result.best_estimator_.model_
-best_model.save("best_model.keras")  # zapis w formacie Keras
+print("EVALUATION  DONE")
+
+joblib.dump(grid_result.best_estimator_, "RF/best_model.pkl")
+print("\nModel zapisany jako best_model.pkl")
+
+print("DUMP DONE")
 
 results_table = trainer.get_results_table() # tworzenie tabeli z wszystkimi modelami i parametrami
 fig, ax = plt.subplots(figsize=(12, len(results_table)*0.5))
@@ -105,5 +121,8 @@ tbl = table(ax, results_table, loc='center', cellLoc='center', colWidths=[0.1]*l
 tbl.auto_set_font_size(False)
 tbl.set_fontsize(10)
 tbl.scale(1, 1.5)
-plt.savefig("gridsearch_results.png", bbox_inches='tight', dpi=150)
+
+print("TABLE DONE")
+
+plt.savefig("RF/gridsearch_results.png", bbox_inches='tight', dpi=150)
 plt.close()
