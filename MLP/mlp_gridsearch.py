@@ -1,19 +1,27 @@
 import os
+import random
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 from pandas.plotting import table
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
+import tensorflow as tf
+from scikeras.wrappers import KerasClassifier
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
 
 from classes.dataloader import DataLoader
 from classes.grid_search_trainer import GridSearchTrainer
 
 SEED = 42
+np.random.seed(SEED)
+random.seed(SEED)
+tf.random.set_seed(SEED)
 
-class RFPipeline:
+class MLPPipeline:
     def __init__(self):
         data_loader = DataLoader()
         datasets = data_loader.load()
@@ -27,26 +35,38 @@ class RFPipeline:
         self.input_dim = self.X_train.shape[1]
         self.num_classes = len(np.unique(self.y_train))
 
+        self.model = KerasClassifier(model = self.build_model_fn, verbose=2)
         self.pipeline = Pipeline([
             ('scaler', StandardScaler()),
-            ('rf', RandomForestClassifier(random_state=SEED))
+            ('mlp', self.model)
         ])
     
+    def build_model_fn(self, num_layers=1, units=32, activation='relu', lr=0.001):
+        model = Sequential()
+        model.add(Input(shape=(self.input_dim,)))
+        for _ in range(num_layers):
+            model.add(Dense(units, activation=activation))
+        model.add(Dense(self.num_classes, activation='softmax'))
+        model.compile(optimizer=Adam(learning_rate=lr),
+                    loss='sparse_categorical_crossentropy',
+                    metrics=['accuracy'])
+        return model
+    
     def train(self):
-        param_grid = { 
-            'n_estimators': [100, 300],
-            'criterion' :['gini', 'entropy'],
-            'max_features': ['sqrt', 'log2'],
-            'max_depth' : [15, 20, None],
-            'min_samples_leaf': [2, 5],
-            'min_samples_split': [5, 10]
+        param_grid = {
+            'mlp__model__num_layers': [1, 2, 3],
+            'mlp__model__units': [16, 32, 64],
+            'mlp__model__activation': ['relu', 'tanh'],
+            'mlp__model__lr': [0.01, 0.001, 0.0001],
+            'mlp__batch_size': [64],
+            'mlp__epochs': [50]
         }
 
         trainer = GridSearchTrainer(self.pipeline, param_grid)
         grid_result = trainer.train(self.X_train, self.y_train) # trenowanie
 
-        os.makedirs("RF", exist_ok=True)
-        joblib.dump(grid_result.best_estimator_, "RF/best_model.pkl")
+        os.makedirs("MLP", exist_ok=True)
+        joblib.dump(grid_result.best_estimator_, "MLP/best_model.pkl")
 
         self.save_table(trainer)
 
@@ -58,6 +78,6 @@ class RFPipeline:
         tbl.auto_set_font_size(False)
         tbl.set_fontsize(10)
         tbl.scale(1, 1.5)
-        os.makedirs("RF", exist_ok=True)
-        plt.savefig("RF/gridsearch_results.png", bbox_inches='tight', dpi=150)
+        os.makedirs("MLP", exist_ok=True)
+        plt.savefig("MLP/gridsearch_results.png", bbox_inches='tight', dpi=150)
         plt.close()
