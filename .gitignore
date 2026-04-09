@@ -1,6 +1,5 @@
 venv/
 env/
-*.png
 *.keras
 **/__pycache__/
 *.pyc
