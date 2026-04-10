@@ -21,36 +21,38 @@ np.random.seed(SEED)
 random.seed(SEED)
 tf.random.set_seed(SEED)
 
+data_loader = DataLoader()
+datasets = data_loader.load()
+
+X_train, y_train = datasets['train']
+X_test, y_test = datasets['test']
+
+X_train, y_train = shuffle(X_train, y_train, random_state=SEED)
+X_test, y_test = shuffle(X_test, y_test, random_state=SEED)
+
+input_dim = X_train.shape[1]
+num_classes = len(np.unique(y_train))
+
+def build_model_fn(num_layers=1, units=32, activation='relu', lr=0.001):
+    model = Sequential()
+    model.add(Input(shape=(input_dim,)))
+    for _ in range(num_layers):
+        model.add(Dense(units, activation=activation))
+    model.add(Dense(num_classes, activation='softmax'))
+    model.compile(optimizer=Adam(learning_rate=lr),
+                loss='sparse_categorical_crossentropy',
+                metrics=['accuracy'])
+    return model
+
 class MLPPipeline:
     def __init__(self):
-        data_loader = DataLoader()
-        datasets = data_loader.load()
+        self.model = KerasClassifier(model=build_model_fn, verbose=2)
 
-        self.X_train, self.y_train = datasets['train']
-        self.X_test, self.y_test = datasets['test']
-
-        self.X_train, self.y_train = shuffle(self.X_train, self.y_train, random_state=SEED)
-        self.X_test, self.y_test = shuffle(self.X_test, self.y_test, random_state=SEED)
-
-        self.input_dim = self.X_train.shape[1]
-        self.num_classes = len(np.unique(self.y_train))
-
-        self.model = KerasClassifier(model = self.build_model_fn, verbose=2)
         self.pipeline = Pipeline([
             ('scaler', StandardScaler()),
             ('mlp', self.model)
         ])
-    
-    def build_model_fn(self, num_layers=1, units=32, activation='relu', lr=0.001):
-        model = Sequential()
-        model.add(Input(shape=(self.input_dim,)))
-        for _ in range(num_layers):
-            model.add(Dense(units, activation=activation))
-        model.add(Dense(self.num_classes, activation='softmax'))
-        model.compile(optimizer=Adam(learning_rate=lr),
-                    loss='sparse_categorical_crossentropy',
-                    metrics=['accuracy'])
-        return model
+
     
     def train(self):
         param_grid = {
@@ -63,7 +65,7 @@ class MLPPipeline:
         }
 
         trainer = GridSearchTrainer(self.pipeline, param_grid)
-        grid_result = trainer.train(self.X_train, self.y_train) # trenowanie
+        grid_result = trainer.train(X_train, y_train) # trenowanie
 
         os.makedirs("MLP", exist_ok=True)
         joblib.dump(grid_result.best_estimator_, "MLP/best_model.pkl")
