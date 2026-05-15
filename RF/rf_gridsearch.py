@@ -36,7 +36,8 @@ class RFPipeline:
             'rf__criterion' :['gini', 'entropy', 'log_loss'],
             'rf__max_features': ['sqrt', 'log2'],
             'rf__max_depth' : [10, 20, None],
-            'rf__bootstrap' : [True, False]
+            'rf__bootstrap' : [True, False],
+            'rf__class_weight' : [None, 'balanced']
         }
 
         trainer = GridSearchTrainer(self.pipeline, param_grid)
