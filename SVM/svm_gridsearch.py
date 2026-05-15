@@ -51,12 +51,6 @@ class SVMPipeline:
                 'svm__gamma': ['scale', 'auto'],
                 'svm__class_weight': [None, 'balanced']
             },
-            {
-                'svm__kernel': ['sigmoid'],
-                'svm__C': [0.001, 0.1, 1, 10, 100],
-                'svm__gamma': ['scale', 'auto'],
-                'svm__class_weight': [None, 'balanced']
-            }
         ]
 
         trainer = GridSearchTrainer(self.pipeline, param_grid)
