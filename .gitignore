@@ -4,6 +4,6 @@ env/
 **/__pycache__/
 *.pyc
 *.pkl
-*.csv
-*.txt
-*.png
+**/*.csv
+**/*.txt
+**/*.png
