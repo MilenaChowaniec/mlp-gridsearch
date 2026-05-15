@@ -16,8 +16,6 @@ from tensorflow.keras.optimizers import Adam
 from classes.dataloader import DataLoader
 from classes.grid_search_trainer import GridSearchTrainer
 
-from tensorflow.keras.initializers import GlorotUniform
-
 SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
@@ -27,10 +25,8 @@ data_loader = DataLoader()
 datasets = data_loader.load()
 
 X_train, y_train = datasets['train']
-X_test, y_test = datasets['train']
 
 X_train, y_train = shuffle(X_train, y_train, random_state=SEED)
-X_test, y_test = shuffle(X_test, y_test, random_state=SEED)
 
 input_dim = X_train.shape[1]
 num_classes = len(np.unique(y_train))
@@ -59,11 +55,11 @@ class MLPPipeline:
     
     def train(self):
         param_grid = {
-            'mlp__model__num_layers': [1, 2, 3],
-            'mlp__model__units': [16, 32, 64],
+            'mlp__model__num_layers': [1, 2, 3, 4],
+            'mlp__model__units': [16, 32, 64, 128],
             'mlp__model__activation': ['tanh', 'relu', 'sigmoid'],
             'mlp__model__lr': [0.001, 0.01, 0.1],
-            'mlp__batch_size': [64],
+            'mlp__batch_size': [128],
             'mlp__epochs': [50]
         }
 
