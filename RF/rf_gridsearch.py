@@ -1,8 +1,5 @@
 import os
-import joblib
-import matplotlib.pyplot as plt
 import numpy as np
-from pandas.plotting import table
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler

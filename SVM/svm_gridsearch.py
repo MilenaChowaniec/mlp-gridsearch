@@ -1,9 +1,5 @@
 import os
-import joblib
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from pandas.plotting import table
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -35,19 +31,25 @@ class SVMPipeline:
         param_grid = [
             {
                 'svm__kernel': ['linear'],
-                'svm__C': [0.001, 0.1, 1, 10, 100],
+                'svm__C': [0.1, 1, 10],
                 'svm__class_weight': [None, 'balanced']
             },
             {
                 'svm__kernel': ['rbf'],
-                'svm__C': [0.001, 0.1, 1, 10, 100],
+                'svm__C': [0.1, 1, 10],
                 'svm__gamma': ['scale', 'auto'],
                 'svm__class_weight': [None, 'balanced']
             },
             {
                 'svm__kernel': ['poly'],
-                'svm__C': [0.001, 0.1, 1, 10, 100],
+                'svm__C': [0.1, 1, 10],
                 'svm__degree': [2, 3, 4],
+                'svm__gamma': ['scale', 'auto'],
+                'svm__class_weight': [None, 'balanced']
+            },
+            {
+                'svm__kernel': ['sigmoid'],
+                'svm__C': [0.1, 1, 10],
                 'svm__gamma': ['scale', 'auto'],
                 'svm__class_weight': [None, 'balanced']
             },
