@@ -19,10 +19,8 @@ class RFPipeline:
         datasets = data_loader.load()
 
         self.X_train, self.y_train = datasets['train']
-        self.X_test, self.y_test = datasets['test']
 
         self.X_train, self.y_train = shuffle(self.X_train, self.y_train, random_state=SEED)
-        self.X_test, self.y_test = shuffle(self.X_test, self.y_test, random_state=SEED)
 
         self.input_dim = self.X_train.shape[1]
         self.num_classes = len(np.unique(self.y_train))
@@ -34,30 +32,22 @@ class RFPipeline:
     
     def train(self):
         param_grid = { 
-            'n_estimators': [100, 300],
-            'criterion' :['gini', 'entropy'],
-            'max_features': ['sqrt', 'log2'],
-            'max_depth' : [15, 20, None],
-            'min_samples_leaf': [2, 5],
-            'min_samples_split': [5, 10]
+            'rf__n_estimators': [100, 300],
+            'rf__criterion' :['gini', 'entropy', 'log_loss'],
+            'rf__max_features': ['sqrt', 'log2'],
+            'rf__max_depth' : [10, 20, None],
+            'rf__bootstrap' : [True, False]
         }
 
         trainer = GridSearchTrainer(self.pipeline, param_grid)
-        grid_result = trainer.train(self.X_train, self.y_train) # trenowanie
-
-        os.makedirs("RF", exist_ok=True)
-        joblib.dump(grid_result.best_estimator_, "RF/best_model.pkl")
+        trainer.train(self.X_train, self.y_train) # trenowanie
 
         self.save_table(trainer)
 
     def save_table(self, trainer):
-        results_table = trainer.get_results_table() # tworzenie tabeli z wszystkimi modelami i parametrami
-        fig, ax = plt.subplots(figsize=(12, len(results_table)*0.5))
-        ax.axis('off')
-        tbl = table(ax, results_table, loc='center', cellLoc='center', colWidths=[0.1]*len(results_table.columns))
-        tbl.auto_set_font_size(False)
-        tbl.set_fontsize(10)
-        tbl.scale(1, 1.5)
+        results_table = trainer.get_results_table()
+
         os.makedirs("RF", exist_ok=True)
-        plt.savefig("RF/gridsearch_results.png", bbox_inches='tight', dpi=150)
-        plt.close()
+
+        with open("RF/gridsearch_results.txt", "w", encoding="utf-8") as f:
+            f.write(results_table.to_string(index=False))

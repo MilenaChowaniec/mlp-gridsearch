@@ -16,6 +16,8 @@ from tensorflow.keras.optimizers import Adam
 from classes.dataloader import DataLoader
 from classes.grid_search_trainer import GridSearchTrainer
 
+from tensorflow.keras.initializers import GlorotUniform
+
 SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
@@ -25,7 +27,7 @@ data_loader = DataLoader()
 datasets = data_loader.load()
 
 X_train, y_train = datasets['train']
-X_test, y_test = datasets['test']
+X_test, y_test = datasets['train']
 
 X_train, y_train = shuffle(X_train, y_train, random_state=SEED)
 X_test, y_test = shuffle(X_test, y_test, random_state=SEED)
@@ -34,6 +36,7 @@ input_dim = X_train.shape[1]
 num_classes = len(np.unique(y_train))
 
 def build_model_fn(num_layers=1, units=32, activation='relu', lr=0.001):
+
     model = Sequential()
     model.add(Input(shape=(input_dim,)))
     for _ in range(num_layers):
@@ -58,28 +61,21 @@ class MLPPipeline:
         param_grid = {
             'mlp__model__num_layers': [1, 2, 3],
             'mlp__model__units': [16, 32, 64],
-            'mlp__model__activation': ['relu', 'tanh'],
-            'mlp__model__lr': [0.01, 0.001, 0.0001],
+            'mlp__model__activation': ['tanh', 'relu', 'sigmoid'],
+            'mlp__model__lr': [0.001, 0.01, 0.1],
             'mlp__batch_size': [64],
             'mlp__epochs': [50]
         }
 
         trainer = GridSearchTrainer(self.pipeline, param_grid)
-        grid_result = trainer.train(X_train, y_train) # trenowanie
-
-        os.makedirs("MLP", exist_ok=True)
-        joblib.dump(grid_result.best_estimator_, "MLP/best_model.pkl")
+        trainer.train(X_train, y_train) # trenowanie
 
         self.save_table(trainer)
 
     def save_table(self, trainer):
-        results_table = trainer.get_results_table() # tworzenie tabeli z wszystkimi modelami i parametrami
-        fig, ax = plt.subplots(figsize=(12, len(results_table)*0.5))
-        ax.axis('off')
-        tbl = table(ax, results_table, loc='center', cellLoc='center', colWidths=[0.1]*len(results_table.columns))
-        tbl.auto_set_font_size(False)
-        tbl.set_fontsize(10)
-        tbl.scale(1, 1.5)
+        results_table = trainer.get_results_table()
+
         os.makedirs("MLP", exist_ok=True)
-        plt.savefig("MLP/gridsearch_results.png", bbox_inches='tight', dpi=150)
-        plt.close()
+
+        with open("MLP/gridsearch_results.txt", "w", encoding="utf-8") as f:
+            f.write(results_table.to_string(index=False))

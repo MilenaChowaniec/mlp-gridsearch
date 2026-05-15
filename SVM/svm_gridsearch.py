@@ -20,10 +20,8 @@ class SVMPipeline:
         datasets = data_loader.load()
 
         self.X_train, self.y_train = datasets['train']
-        self.X_test, self.y_test = datasets['test']
 
         self.X_train, self.y_train = shuffle(self.X_train, self.y_train, random_state=SEED)
-        self.X_test, self.y_test = shuffle(self.X_test, self.y_test, random_state=SEED)
 
         self.input_dim = self.X_train.shape[1]
         self.num_classes = len(np.unique(self.y_train))
@@ -37,37 +35,40 @@ class SVMPipeline:
         param_grid = [
             {
                 'svm__kernel': ['linear'],
-                'svm__C': [0.001, 0.1, 1, 10]
+                'svm__C': [0.001, 0.1, 1, 10, 100],
+                'svm__class_weight': [None, 'balanced']
             },
             {
                 'svm__kernel': ['rbf'],
-                'svm__C': [0.001, 0.1, 1, 10],
-                'svm__gamma': ['scale', 'auto', 0.1]
+                'svm__C': [0.001, 0.1, 1, 10, 100],
+                'svm__gamma': ['scale', 'auto'],
+                'svm__class_weight': [None, 'balanced']
             },
             {
                 'svm__kernel': ['poly'],
-                'svm__C': [0.001, 0.1, 1, 10],
+                'svm__C': [0.001, 0.1, 1, 10, 100],
                 'svm__degree': [2, 3, 4],
-                'svm__gamma': ['scale']
+                'svm__gamma': ['scale', 'auto'],
+                'svm__class_weight': [None, 'balanced']
+            },
+            {
+                'svm__kernel': ['sigmoid'],
+                'svm__C': [0.001, 0.1, 1, 10, 100],
+                'svm__gamma': ['scale', 'auto'],
+                'svm__class_weight': [None, 'balanced']
             }
         ]
 
         trainer = GridSearchTrainer(self.pipeline, param_grid)
-        grid_result = trainer.train(self.X_train, self.y_train) # trenowanie
-
-        os.makedirs("SVM", exist_ok=True)
-        joblib.dump(grid_result.best_estimator_, "SVM/best_model.pkl")
+        trainer.train(self.X_train, self.y_train) # trenowanie
 
         self.save_table(trainer)
 
+
     def save_table(self, trainer):
-        results_table = trainer.get_results_table() # tworzenie tabeli z wszystkimi modelami i parametrami
-        fig, ax = plt.subplots(figsize=(12, len(results_table)*0.5))
-        ax.axis('off')
-        tbl = table(ax, results_table, loc='center', cellLoc='center', colWidths=[0.1]*len(results_table.columns))
-        tbl.auto_set_font_size(False)
-        tbl.set_fontsize(10)
-        tbl.scale(1, 1.5)
+        results_table = trainer.get_results_table()
+
         os.makedirs("SVM", exist_ok=True)
-        plt.savefig("SVM/gridsearch_results.png", bbox_inches='tight', dpi=150)
-        plt.close()
+
+        with open("SVM/gridsearch_results.txt", "w", encoding="utf-8") as f:
+            f.write(results_table.to_string(index=False))

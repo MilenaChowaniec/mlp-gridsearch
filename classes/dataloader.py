@@ -2,7 +2,7 @@ import pandas as pd
 
 class DataLoader:
     """Laduje dane train, test, val z plikow .csv"""
-    def __init__(self, splits=['train', 'test']):
+    def __init__(self, splits=['train']):
         self.splits = splits
         self.datasets = {}
 
